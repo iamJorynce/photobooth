@@ -105,10 +105,17 @@ app.get("/sessionStatus/:id", (req, res) => {
  *    https://your-app.onrender.com/paymongoWebhook
  */
 app.post("/paymongoWebhook", (req, res) => {
+  console.log("WEBHOOK HIT:", JSON.stringify(req.body));
   const signatureHeader = req.headers["paymongo-signature"];
-  if (!verifyPaymongoSignature(req.rawBody, signatureHeader, PAYMONGO_WEBHOOK_SECRET)) {
+  console.log("SIGNATURE HEADER:", signatureHeader);
+  
+  const isValid = verifyPaymongoSignature(req.rawBody, signatureHeader, PAYMONGO_WEBHOOK_SECRET);
+  console.log("SIGNATURE VALID?:", isValid);
+  
+  if (!isValid) {
     return res.status(400).send("Invalid signature");
   }
+  // ... (padayon ang naa na nga code)
 
   const event = req.body.data;
   const eventType = event.attributes.type;
