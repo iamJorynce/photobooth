@@ -73,7 +73,8 @@ app.post("/createPaymentSession", async (req, res) => {
       { data: { attributes: { payment_method: paymentMethodId, client_key: clientKey } } },
       { headers: { Authorization: authHeader(PAYMONGO_PUBLIC_KEY) } }
     );
-    const qrImageBase64 = attachRes.data.data.attributes.next_action.code.image_url;
+       const qrImageBase64 = attachRes.data.data.attributes.next_action.code.image_url;
+   console.log("FULL NEXT ACTION:", JSON.stringify(attachRes.data.data.attributes.next_action));
 
     sessions.set(paymentIntent.id, {
       status: "pending",
