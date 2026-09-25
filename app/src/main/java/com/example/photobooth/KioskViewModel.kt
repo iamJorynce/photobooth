@@ -34,7 +34,7 @@ sealed class KioskState {
 }
 
 // TODO: replace with your deployed Render URL, e.g. https://photobooth-backend.onrender.com
-private const val BACKEND_BASE_URL = "https://REPLACE_ME.onrender.com"
+private const val BACKEND_BASE_URL = "https://photobooth-fcm9.onrender.com"
 private const val POLL_INTERVAL_MS = 3000L
 private const val POLL_TIMEOUT_MS = 5 * 60 * 1000L // give up after 5 min of no payment
 
