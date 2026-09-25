@@ -42,7 +42,8 @@ app.use(express.json({
  */
 app.post("/createPaymentSession", async (req, res) => {
   try {
-    const amountCentavos = 5000; // PHP 50.00
+    const amountPesos = Number(req.body?.amountPesos) || 50;
+const amountCentavos = Math.round(amountPesos * 100);
 
     const intentRes = await axios.post(
       `${PAYMONGO_BASE}/payment_intents`,

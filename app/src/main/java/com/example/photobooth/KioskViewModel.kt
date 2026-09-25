@@ -48,20 +48,18 @@ class KioskViewModel : ViewModel() {
     private var pollingJob: kotlinx.coroutines.Job? = null
 
     /** Customer taps "Start" on the idle screen. */
-    fun startSession() {
+    fun startSession(priceInPesos: Int) {
         viewModelScope.launch {
             try {
-                val (newSessionId, qrImageBase64) = requestPaymentQrFromBackend()
+                val (newSessionId, qrImageBase64) = requestPaymentQrFromBackend(priceInPesos)
                 sessionId = newSessionId
                 _state.value = KioskState.Payment(
                     sessionId = newSessionId,
                     qrImageBase64 = qrImageBase64,
-                    amount = 50
+                    amount = priceInPesos
                 )
                 pollForPaymentConfirmation(newSessionId)
             } catch (e: Exception) {
-                // TODO: show a real error screen ("connection problem, try again")
-                // instead of silently staying on Idle.
                 _state.value = KioskState.Idle
             }
         }
@@ -98,10 +96,14 @@ class KioskViewModel : ViewModel() {
         val currentSessionId = sessionId ?: return
         _state.value = KioskState.Printing
         viewModelScope.launch {
-            // TODO: replace with real ESC/POS print call.
-            printPhoto(photoPath)
-            val downloadUrl = uploadPhotoToBackend(currentSessionId, photoPath)
-            _state.value = KioskState.Download(downloadUrl = downloadUrl)
+            try {
+                printPhoto(photoPath)
+                val downloadUrl = uploadPhotoToBackend(currentSessionId, photoPath)
+                _state.value = KioskState.Download(downloadUrl = downloadUrl)
+            } catch (e: Exception) {
+                // TODO: show a real error screen instead of silently going back.
+                _state.value = KioskState.Idle
+            }
         }
     }
 
@@ -114,15 +116,16 @@ class KioskViewModel : ViewModel() {
 
     // ---- Real backend calls (plain HTTP to the Render server) ----
 
-    private suspend fun requestPaymentQrFromBackend(): Pair<String, String> =
+    private suspend fun requestPaymentQrFromBackend(priceInPesos: Int): Pair<String, String> =
         withContext(Dispatchers.IO) {
-            val body = "{}".toRequestBody("application/json".toMediaType())
+            val json = JSONObject().put("amountPesos", priceInPesos)
+            val body = json.toString().toRequestBody("application/json".toMediaType())
             val request = Request.Builder()
                 .url("$BACKEND_BASE_URL/createPaymentSession")
                 .post(body)
                 .build()
-            val json = executeForJson(request)
-            json.getString("sessionId") to json.getString("qrImageBase64")
+            val result = executeForJson(request)
+            result.getString("sessionId") to result.getString("qrImageBase64")
         }
 
     private suspend fun fetchSessionStatus(sessionId: String): String =

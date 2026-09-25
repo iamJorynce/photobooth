@@ -10,12 +10,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.example.photobooth.screens.AdminSettingsScreen
 import com.example.photobooth.screens.CaptureScreen
 import com.example.photobooth.screens.DownloadScreen
 import com.example.photobooth.screens.IdleScreen
 import com.example.photobooth.screens.PaymentScreen
 import com.example.photobooth.screens.PrintingScreen
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -23,8 +30,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // TODO: enable kiosk / lock-task mode here so customers can't leave the app.
-        // See: https://developer.android.com/work/dpc/dedicated-devices/lock-task-mode
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -37,11 +42,31 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun KioskApp(viewModel: KioskViewModel) {
+    val context = LocalContext.current
+    val store = remember { AdminSettingsStore(context) }
+    val scope = rememberCoroutineScope()
+    val settings by store.settings.collectAsState(initial = AdminSettings())
+    var showAdmin by remember { mutableStateOf(false) }
+
+    if (showAdmin) {
+        AdminSettingsScreen(
+            currentPin = settings.pin,
+            currentPrice = settings.priceInPesos,
+            currentLogoPath = settings.logoPath,
+            onSavePrice = { price -> scope.launch { store.savePrice(price) } },
+            onSaveLogoPath = { path -> scope.launch { store.saveLogoPath(path) } },
+            onExit = { showAdmin = false }
+        )
+        return
+    }
+
     val state by viewModel.state.collectAsState()
 
     when (val current = state) {
         is KioskState.Idle -> IdleScreen(
-            onStart = { viewModel.startSession() }
+            priceInPesos = settings.priceInPesos,
+            onStart = { viewModel.startSession(settings.priceInPesos) },
+            onAdminLongPress = { showAdmin = true }
         )
         is KioskState.Payment -> PaymentScreen(
             sessionId = current.sessionId,
